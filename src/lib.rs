@@ -11,11 +11,14 @@ extern crate serde;
 #[cfg(test)]
 extern crate serde_json;
 
-#[macro_export]
 /// A macro to construct d128 literals.
 ///
+/// This macro expands to a string parse at runtime, which may be costly.
+/// Users should use the decimal-macros crate instead for a const version
+/// that runs the conversion at build-time.
+///
 /// # Examples:
-/// ```
+/// ```text
 /// # #[macro_use]
 /// # extern crate decimal;
 /// # fn main() {
@@ -75,7 +78,7 @@ bitflags! {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```text
     /// # #[macro_use]
     /// # extern crate decimal;
     /// # use decimal::d128;
@@ -89,6 +92,7 @@ bitflags! {
     /// // The previous status flag was not cleared!
     /// assert!(d128::get_status().contains(decimal::Status::DIVISION_BY_ZERO));
     /// # }
+    /// ```
     pub struct Status: u32 {
         /// Conversion syntax error.
         const CONVERSION_SYNTAX    = 0x00000001;
