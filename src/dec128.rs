@@ -508,12 +508,12 @@ impl d128 {
     }
 
     /// Creates a d128 from raw bytes. Endianess is host dependent.
-    pub unsafe fn from_raw_bytes(bytes: [u8; 16]) -> d128 {
+    pub const unsafe fn from_raw_bytes(bytes: [u8; 16]) -> d128 {
         d128 { bytes: bytes }
     }
 
     /// Returns raw bytes for this d128. Endianess is host dependent.
-    pub fn to_raw_bytes(&self) -> [u8; 16] {
+    pub const fn to_raw_bytes(&self) -> [u8; 16] {
         self.bytes
     }
 
