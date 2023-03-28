@@ -863,6 +863,40 @@ impl d128 {
     pub fn is_zero(&self) -> bool {
         unsafe { decQuadIsZero(self) != 0 }
     }
+
+    /// Get the exponent and coefficient of the value as parts.
+    ///
+    /// Returned components are:
+    ///  * `true` if the value is negative
+    ///  * the exponent (0 if the value is infinite or NaN)
+    ///  * digits of the coefficient, one digit per byte (all zero if the value is infinite,
+    ///    and only the first value zero if it is a NaN).
+    ///
+    /// ```rust
+    /// # use decimal::d128;
+    /// # use std::str::FromStr;
+    /// assert_eq!(
+    ///     d128::from_str("867.5309").unwrap().to_bcd(),
+    ///     (false,
+    ///      -4,
+    ///      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ///       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 6, 7, 5, 3, 0, 9])
+    /// )
+    /// ```
+    ///
+    /// The exponent indicates the offset of the decimal point from the end of
+    /// the digits array; negative values place it either before or in the middle
+    /// of the digits, and positive values place it after the digits.
+    pub fn to_bcd(&self) -> (bool, i32, [u8; 34]) {
+        let mut coefficient = MaybeUninit::<[u8; 34]>::uninit();
+        let mut exponent = MaybeUninit::uninit();
+
+        unsafe {
+            let sign = decQuadToBCD(self, exponent.as_mut_ptr(), coefficient.as_mut_ptr() as *mut _);
+
+            (sign != 0, exponent.assume_init(), coefficient.assume_init())
+        }
+    }
 }
 
 extern "C" {
@@ -873,6 +907,7 @@ extern "C" {
     fn decQuadFromInt32(res: *mut d128, src: i32) -> *mut d128;
     fn decQuadFromString(res: *mut d128, s: *const c_char, ctx: *mut Context) -> *mut d128;
     fn decQuadFromUInt32(res: *mut d128, src: u32) -> *mut d128;
+    fn decQuadToBCD(src: *const d128, exp: *mut i32, bcd: *mut u8) -> i32;
     fn decQuadToString(src: *const d128, s: *mut c_char) -> *mut c_char;
     fn decQuadToInt32(src: *const d128, ctx: *mut Context, round: Rounding) -> i32;
     fn decQuadToUInt32(src: *const d128, ctx: *mut Context, round: Rounding) -> u32;
@@ -1145,5 +1180,23 @@ mod tests {
         assert_eq!(d128!(10), decimals.iter().sum());
 
         assert_eq!(d128!(10), decimals.into_iter().sum());
+    }
+
+    #[test]
+    fn to_bcd() {
+        assert_eq!(
+            d128!(-1e-30).to_bcd(),
+            (true, -30, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 1])
+        );
+        assert_eq!(
+            d128!(3.141592654e6).to_bcd(),
+            (false, -3, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 3, 1, 4, 1, 5, 9,
+                        2, 6, 5, 4])
+        );
     }
 }
